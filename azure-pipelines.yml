@@ -20,3 +20,29 @@ steps:
     publishJUnitResults: true
     testResultsFiles: '**/surefire-reports/TEST-*.xml'
     goals: 'package'
+- task: AzureImageBuilderTask@1
+  displayName: 'Azure VM Image Builder Task'
+ inputs:
+    managedIdentity: '/subscriptions/f62c1351-b0e5-4a98-9ee9-c04070490d82/resourcegroups/casestudy/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<USER ASSIGNED IDENTITY NAME>'
+    imageSource: 'marketplace'
+    packagePath: '$(System.DefaultWorkingDirectory)/pipeline-artifacts'
+    inlineScript: |
+      sudo mkdir /lib/buildArtifacts
+      sudo cp  "/tmp/pipeline-artifacts.tar.gz" /lib/buildArtifacts/.
+      cd /lib/buildArtifacts/.
+      sudo tar -zxvf pipeline-artifacts.tar.gz
+      sudo sh install.sh
+    storageAccountName: 'csg10032003803d8b38'
+    distributeType: 'sig'
+    galleryImageId: '/subscriptions/f62c1351-b0e5-4a98-9ee9-c04070490d82/resourceGroups/<RESOURCE GROUP>/providers/Microsoft.Compute/galleries/myVMSSGallery/images/MyImage/versions/0.0.$(Build.BuildId)'
+    replicationRegions: 'eastus'
+    ibSubscription: 'f62c1351-b0e5-4a98-9ee9-c04070490d82'
+    ibAzureResourceGroup: 'csg10032003803d8b38'
+    ibLocation: 'eastus'
+
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: '`f62c1351-b0e5-4a98-9ee9-c04070490d82`' #Authorize and in the task editor
+    ScriptType: 'pscore'
+    scriptLocation: 'inlineScript'
+    Inline: 'az vmss update --resource-group myVMSSResourceGroup --name vmssScaleSet --set virtualMachineProfile.storageProfile.imageReference.id=/subscriptions/<SUBSCRIPTION ID>/resourceGroups/myVMSSResourceGroup/providers/Microsoft.Compute/galleries/myVMSSGallery/images/MyImage/versions/0.0.$(Build.BuildId)'
